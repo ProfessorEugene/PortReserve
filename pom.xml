@@ -10,14 +10,33 @@
     <name>portreserve</name>
     <description>A simply utility for allowing java application to reserve ports.</description>
     <url>https://github.com/ProfessorEugene/PortReserve</url>
-    <contributors>
-        <contributor>
+    <developers>
+        <developer>
             <name>Eugene Rachitskiy</name>
             <url>http://rachitskillisaurus.com/</url>
             <email>eugene@rachitskiy.com</email>
             <timezone>EST</timezone>
-        </contributor>
-    </contributors>
+        </developer>
+    </developers>
+    <scm>
+        <url>scm:git:git@github.com:ProfessorEugene/PortReserve.git</url>
+    </scm>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.2</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+        </plugins>
+
+    </build>
+
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
@@ -44,4 +63,10 @@
 
     </dependencies>
 
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
 </project>
