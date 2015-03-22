@@ -4,7 +4,7 @@
 
     <groupId>com.rachitskillisaurus.portreserve</groupId>
     <artifactId>portreserve</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <name>portreserve</name>
     <description>A simply utility for allowing java application to reserve ports.</description>
     <url>https://github.com/ProfessorEugene/PortReserve</url>
@@ -18,7 +18,7 @@
     </developers>
     <scm>
         <connection>scm:git:https://github.com/ProfessorEugene/PortReserve.git</connection>
-      <tag>portreserve-1.0.0</tag>
+      <tag>HEAD</tag>
   </scm>
     <build>
         <plugins>
