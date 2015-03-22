@@ -19,7 +19,7 @@
         </developer>
     </developers>
     <scm>
-        <url>scm:git:git@github.com:ProfessorEugene/PortReserve.git</url>
+        <connection>scm:git:git@github.com:ProfessorEugene/PortReserve.git</connection>
     </scm>
     <build>
         <plugins>
