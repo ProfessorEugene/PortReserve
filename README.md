@@ -2,16 +2,6 @@ PortReserve [![Build Status](https://drone.io/github.com/ProfessorEugene/PortRes
 ===========
 A simply utility for allowing java application to reserve ports.  This type of functionality is useful when writing functional testing that needs to scaffold many different TCP services on any available port.  
 
-The Problem
-===========
-TCP ports can't really be "reserved"; one can bind a socket to a port, precluding other services from using this port system wide, but you have to unbind/close the socket before you can use this service port again.  The typical way to detect a free server port is to attempt to create a `ServerSocket`, catching any exceptions and later closing/unbinding the first socket that could be bound.  Once a free server port is detected in this manner, it is presuably used to configure a scaffolding that uses this TCP port at some point in the future.  For example, to spin up a jetty server on any availalbe port, one might find a free port, close it, and then later start the jetty server on this port.  The problem is that after a port is located in this manner and before the target scaffolding is initialized, any other thread or process can bind to the supposedly free port, breaking the application.
-
-Most Java server/scaffolding APIs do not support passing in an already bound `Serversocket`, instead expecting a configurable `int` port.  On startup, these scaffoldings will instantiate a `ServerSocket` - either directly or via nio and later attempt to `bind` this socket to the configured port.  The PortReserve library allows the scaffolding code to create and bind a `ServerSocket` as it would normally do, but replaces the socket implementation instance behind the newly created socket with an already bound reservation's instance.
-
-The Solution
-============
-This solution offers clients a `PortReservation` that comes with a pre-bound socket as well as a `PortReservation#transfer(TransferCallback)` method that allows one to seamlessly transfer ownership of the bound socket to a client.  Internally, the PortReserve library replaces the JDK `SocketImplFactory` with one that returns proxies that can intercept "bind" calls to allow seamless transfer of "reserved" ports to client code.
-
 Usage
 =====
 Add PortReserve as a maven dependency:
@@ -22,6 +12,7 @@ Add PortReserve as a maven dependency:
 	<version>1.0.0</version>
 </dependency>
 ```
+Alternatively, download the jar directly from https://repo1.maven.org/maven2/com/rachitskillisaurus/portreserve/portreserve/1.0.0/portreserve-1.0.0.jar, obtain slf4j-api > 1.7.6 and cglib > 3.1 and place all three on your classpath.
 
 Reserving a single port:
 ```java
@@ -53,6 +44,16 @@ Reserving multiple ports:
 		}
 	}, ra, rb);
 ```
+
+The Problem
+===========
+TCP ports can't really be "reserved"; one can bind a socket to a port, precluding other services from using this port system wide, but you have to unbind/close the socket before you can use this service port again.  The typical way to detect a free server port is to attempt to create a `ServerSocket`, catching any exceptions and later closing/unbinding the first socket that could be bound.  Once a free server port is detected in this manner, it is presuably used to configure a scaffolding that uses this TCP port at some point in the future.  For example, to spin up a jetty server on any availalbe port, one might find a free port, close it, and then later start the jetty server on this port.  The problem is that after a port is located in this manner and before the target scaffolding is initialized, any other thread or process can bind to the supposedly free port, breaking the application.
+
+Most Java server/scaffolding APIs do not support passing in an already bound `Serversocket`, instead expecting a configurable `int` port.  On startup, these scaffoldings will instantiate a `ServerSocket` - either directly or via nio and later attempt to `bind` this socket to the configured port.  The PortReserve library allows the scaffolding code to create and bind a `ServerSocket` as it would normally do, but replaces the socket implementation instance behind the newly created socket with an already bound reservation's instance.
+
+The Solution
+============
+This solution offers clients a `PortReservation` that comes with a pre-bound socket as well as a `PortReservation#transfer(TransferCallback)` method that allows one to seamlessly transfer ownership of the bound socket to a client.  Internally, the PortReserve library replaces the JDK `SocketImplFactory` with one that returns proxies that can intercept "bind" calls to allow seamless transfer of "reserved" ports to client code.
 
 Port Reservation Pitfalls
 =========================
