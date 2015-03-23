@@ -14,6 +14,15 @@ This solution offers clients a `PortReservation` that comes with a pre-bound soc
 
 Usage
 =====
+Add PortReserve as a maven dependency:
+```xml
+<dependency>
+	<groupId>com.rachitskillisaurus.portreserve</groupId>
+	<artifactId>portreserve</artifactId>
+	<version>1.0.0</version>
+</dependency>
+```
+
 Reserving a single port:
 ```java
 	/* reserve first free open port above 1024 */
@@ -34,15 +43,15 @@ Reserving a single port:
 Reserving multiple ports:
 ```java
 	final PortReservation ra = PortReservationProvider.get().reserveOpenPort(1024);
-        final PortReservation rb = PortReservationProvider.get().reserveOpenPort(1024);
+	final PortReservation rb = PortReservationProvider.get().reserveOpenPort(1024);
 	myService.setFirstPort(ra.getPort());
 	myService.setSecondPort(rb.getPort());
 	PortReservation.transfer(new TransferCallback() {
-            @Override
-            public void transfer() throws Exception {
-		myService.start();
-            }
-        }, ra, rb);
+		@Override
+		public void transfer() throws Exception {
+			myService.start();
+		}
+	}, ra, rb);
 ```
 
 Port Reservation Pitfalls
@@ -53,4 +62,4 @@ This library aims at allowing users to reserve ports on specific interfaces and 
 
 Internals
 =========
-PortReserve uses a `SocketImplFactory` that replaces the `SocketImpl` instances underlying all sockets with CGLib enhacned proxies.  These proxies allow one to detect internal bind calls and transfer "ownership" of a `ServerSocket`.  ThreadLocals and a Map are used to ensure transfer only occurs during appropriate execution state (inside the `TransferCallback#transfer() method)
+PortReserve uses a `SocketImplFactory` that replaces the `SocketImpl` instances underlying all sockets with CGLib enhacned proxies.  These proxies allow one to detect internal bind calls and transfer "ownership" of a `ServerSocket`.  ThreadLocals and a Map are used to ensure transfer only occurs during appropriate execution state (inside the `TransferCallback#transfer()` method)
