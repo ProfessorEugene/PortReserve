@@ -12,7 +12,7 @@ Add PortReserve as a maven dependency:
 	<version>1.0.0</version>
 </dependency>
 ```
-Alternatively, download the jar directly from https://repo1.maven.org/maven2/com/rachitskillisaurus/portreserve/portreserve/1.0.0/portreserve-1.0.0.jar, obtain slf4j-api > 1.7.6 and cglib > 3.1 and place all three on your classpath.
+Alternatively, download the jar directly from [here]( https://repo1.maven.org/maven2/com/rachitskillisaurus/portreserve/portreserve/1.0.0/portreserve-1.0.0.jar), obtain slf4j-api > 1.7.6 and cglib > 3.1 and place all three on your classpath.
 
 Reserving a single port:
 ```java
