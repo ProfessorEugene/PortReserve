@@ -1,11 +1,12 @@
 package com.rachitskillisaurus.portreserve;
 
+import com.rachitskillisaurus.portreserve.bootstrap.PortReservationInternal;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.SocketImpl;
 import java.util.Arrays;
 
 /**
@@ -24,15 +25,17 @@ import java.util.Arrays;
  * @see com.rachitskillisaurus.portreserve.PortReservationProvider
  */
 public class PortReservation implements Closeable {
-    final InheritableThreadLocal<Boolean> transferMode = new InheritableThreadLocal<Boolean>();
-    ServerSocket serverSocket;
-    SocketImpl socketImpl;
+    private PortReservationInternal portReservationInternal;
+
+    static {
+        PortReservationProvider.get();
+    }
 
     /**
      * Internal (package local) constructor
      */
     PortReservation() {
-        transferMode.set(false);
+        portReservationInternal = new PortReservationInternal();
     }
 
     /**
@@ -42,17 +45,7 @@ public class PortReservation implements Closeable {
      * @return an {@link java.net.InetSocketAddress} for this reservation
      */
     public InetSocketAddress getSocketAddress() {
-        return new InetSocketAddress(serverSocket.getInetAddress(), serverSocket.getLocalPort());
-    }
-
-    /**
-     * Get the {@link java.net.InetAddress} for this reservation.  Equivalent to calling {@code
-     * reservation.getServerSocket().getInetAddress()}
-     *
-     * @return the {@link java.net.InetAddress} for this reservation
-     */
-    public InetAddress getAddress() {
-        return serverSocket.getInetAddress();
+        return portReservationInternal.getSocketAddress();
     }
 
     /**
@@ -61,16 +54,21 @@ public class PortReservation implements Closeable {
      * @return port for this reservation
      */
     public int getPort() {
-        return serverSocket.getLocalPort();
+        return portReservationInternal.getServerSocket().getLocalPort();
     }
 
     /**
-     * Get the server socket for this reservation
+     * Get the server socket for this reservation, it's not the same socket that you got from
+     * {@link com.rachitskillisaurus.portreserve.PortReservationProvider#reservePort(InetSocketAddress)},
+     * {@link com.rachitskillisaurus.portreserve.PortReservationProvider#reserveOpenPort(InetAddress, int)}} or
+     * {@link com.rachitskillisaurus.portreserve.PortReservationProvider#reserveOpenPort(int)}
+     * It's an original ServerSocket. Use with caution.
+     * For example, if you will call close() on this socket - PortReservationProvider and PortReservation will not be cleaned up
      *
      * @return server socket
      */
     public ServerSocket getServerSocket() {
-        return serverSocket;
+        return portReservationInternal.getServerSocket();
     }
 
     /**
@@ -80,9 +78,22 @@ public class PortReservation implements Closeable {
      * @param runnable a {@code TransferCallback}
      * @see #transfer(TransferCallback, Iterable)
      * @see #transfer(TransferCallback, PortReservation...)
+     * @throws IllegalStateException if underlying socket of this <code>PortReservation</code> closed
      */
-    public void transfer(TransferCallback runnable) {
-        transfer(runnable, this);
+    public <T> T transfer(TransferCallback<T> runnable) {
+        try {
+            if (isClosed()) {
+                throw new IllegalStateException("Underlying socket for " + this + " is closed");
+            }
+            startTransfer();
+            return runnable.transfer();
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            stopTransfer();
+        }
     }
 
     /**
@@ -91,18 +102,24 @@ public class PortReservation implements Closeable {
      *
      * @param runnable     a {@code TransferCallback}
      * @param reservations a collection of {@code PortReservation} instances
+     * @throws IllegalStateException if underlying socket of any <code>PortReservation</code> from <code>reservations</code> closed
      */
     public static void transfer(final TransferCallback runnable, Iterable<PortReservation> reservations) {
         try {
             for (PortReservation portReservation : reservations) {
-                portReservation.transferMode.set(true);
+                if (portReservation.isClosed()) {
+                    throw new IllegalStateException("Underlying socket for " + portReservation + " is closed");
+                }
+                portReservation.startTransfer();
             }
             runnable.transfer();
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
             for (PortReservation portReservation : reservations) {
-                portReservation.transferMode.set(false);
+                portReservation.stopTransfer();
             }
         }
     }
@@ -113,70 +130,46 @@ public class PortReservation implements Closeable {
      *
      * @param runnable     a {@code TransferCallback}
      * @param reservations a collection of {@code PortReservation} instances
+     * @throws IllegalStateException if underlying socket of any <code>PortReservation</code> from <code>reservations</code> closed
      */
     public static void transfer(final TransferCallback runnable, PortReservation... reservations) {
         transfer(runnable, Arrays.asList(reservations));
     }
 
-    /**
-     * Set underlying server socket SocketImpl
-     *
-     * @param socketImpl server socket SocketImpl
-     */
-    protected void setSocketImpl(SocketImpl socketImpl) {
-        this.socketImpl = socketImpl;
+    private void startTransfer() {
+        if (!portReservationInternal.getTransferMode().compareAndSet(false, true)) {
+            throw new IllegalStateException("Port reservation is already in transfer mode");
+        }
     }
 
-    /**
-     * Set underlying ServerSocket
-     *
-     * @param serverSocket server socket
-     */
-    protected void setServerSocket(ServerSocket serverSocket) {
-        this.serverSocket = serverSocket;
-    }
-
-    /**
-     * Returns {@code true} if the current thread or any of its descendants are currently executing a transfer method
-     *
-     * @return {@code true} if the current thread or any of its descendants are currently executing a transfer method
-     */
-    protected boolean isInTransferMode() {
-        return transferMode.get();
-    }
-
-    /**
-     * Returns the {@code SocketImpl} for the underlying server socket
-     *
-     * @return the {@code SocketImpl} for the underlying server socket
-     */
-    protected SocketImpl getSocketImpl() {
-        return socketImpl;
+    private void stopTransfer() {
+        portReservationInternal.getTransferMode().set(false);
     }
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("PortReservation{");
-        sb.append("serverSocket=").append(serverSocket);
-        sb.append('}');
-        return sb.toString();
+        return portReservationInternal.toString();
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         PortReservation that = (PortReservation) o;
 
-        if (serverSocket != null ? !serverSocket.equals(that.serverSocket) : that.serverSocket != null) return false;
+        return portReservationInternal != null ? portReservationInternal.equals(that.portReservationInternal) :
+                that.portReservationInternal == null;
 
-        return true;
     }
 
     @Override
     public int hashCode() {
-        return serverSocket != null ? serverSocket.hashCode() : 0;
+        return portReservationInternal != null ? portReservationInternal.hashCode() : 0;
     }
 
     /**
@@ -186,8 +179,18 @@ public class PortReservation implements Closeable {
      */
     @Override
     public void close() throws IOException {
-        if (serverSocket != null) {
-            serverSocket.close();
-        }
+        portReservationInternal.close();
+    }
+
+    /**
+     * @return true if underlying serverSocket closed
+     */
+    public boolean isClosed() {
+        ServerSocket serverSocket = getServerSocket();
+        return serverSocket == null || serverSocket.isClosed();
+    }
+
+    PortReservationInternal getInternal() {
+        return portReservationInternal;
     }
 }
